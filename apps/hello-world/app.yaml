@@ -1,0 +1,72 @@
+# Hello world page from Microsoft's AKS sample image (public, nothing sensitive).
+# One replica: blue and green have a single node each (ADR-0005, ADR-0012).
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: hello-world
+  namespace: frontend
+  labels:
+    app: hello-world
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: hello-world
+  template:
+    metadata:
+      labels:
+        app: hello-world
+    spec:
+      containers:
+        - name: hello-world
+          image: mcr.microsoft.com/azuredocs/aks-helloworld:v1
+          ports:
+            - containerPort: 80
+          env:
+            - name: TITLE
+              value: "Hello from the karfffen lab"
+          readinessProbe:
+            httpGet:
+              path: /
+              port: 80
+          resources:
+            requests:
+              cpu: 25m
+              memory: 32Mi
+            limits:
+              cpu: 100m
+              memory: 128Mi
+          securityContext:
+            allowPrivilegeEscalation: false
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: hello-world
+  namespace: frontend
+spec:
+  type: ClusterIP
+  selector:
+    app: hello-world
+  ports:
+    - port: 80
+      targetPort: 80
+---
+# No host, so the page answers on the ingress IP and, later, on the Traffic Manager name.
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: hello-world
+  namespace: frontend
+spec:
+  ingressClassName: webapprouting.kubernetes.azure.com
+  rules:
+    - http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: hello-world
+                port:
+                  number: 80

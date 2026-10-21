@@ -7,6 +7,10 @@ metadata:
 spec:
   ingressClassName: webapprouting.kubernetes.azure.com
   controllerNamePrefix: nginx
+  # One replica: the add-on defaults to 2, which do not fit on the single 2-vCPU node (issue #114).
+  scaling:
+    minReplicas: 1
+    maxReplicas: 1
   loadBalancerAnnotations:
     service.beta.kubernetes.io/azure-pip-name: pip-lab-green-noe-ingress
     service.beta.kubernetes.io/azure-load-balancer-resource-group: rg-lab-green-noe

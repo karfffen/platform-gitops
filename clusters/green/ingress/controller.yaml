@@ -1,0 +1,12 @@
+# Pins the add-on's default ingress controller to this cluster's static IP (ADR-0015 section 2).
+# The IP is referenced by name and resource group, so no address is stored here.
+apiVersion: approuting.kubernetes.azure.com/v1alpha1
+kind: NginxIngressController
+metadata:
+  name: default
+spec:
+  ingressClassName: webapprouting.kubernetes.azure.com
+  controllerNamePrefix: nginx
+  loadBalancerAnnotations:
+    service.beta.kubernetes.io/azure-pip-name: pip-lab-green-noe-ingress
+    service.beta.kubernetes.io/azure-load-balancer-resource-group: rg-lab-green-noe

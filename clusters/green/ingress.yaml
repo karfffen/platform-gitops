@@ -1,0 +1,13 @@
+# Separate from platform so a missing add-on CRD cannot block the other manifests.
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  name: ingress
+  namespace: flux-system
+spec:
+  interval: 10m
+  prune: false
+  path: ./clusters/green/ingress
+  sourceRef:
+    kind: GitRepository
+    name: flux-system

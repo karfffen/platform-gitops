@@ -1,0 +1,58 @@
+# Sized for blue's single 4 GiB node (ADR-0004, ADR-0012). The node also runs system pods and the
+# Flux controllers, so the two namespaces together may limit about 1.5 GiB and 1 vCPU.
+# The LimitRange gives pods without requests a small default so the quota still admits them.
+apiVersion: v1
+kind: ResourceQuota
+metadata:
+  name: compute
+  namespace: frontend
+spec:
+  hard:
+    pods: "10"
+    requests.cpu: 250m
+    requests.memory: 256Mi
+    limits.cpu: 500m
+    limits.memory: 512Mi
+---
+apiVersion: v1
+kind: LimitRange
+metadata:
+  name: defaults
+  namespace: frontend
+spec:
+  limits:
+    - type: Container
+      defaultRequest:
+        cpu: 25m
+        memory: 32Mi
+      default:
+        cpu: 100m
+        memory: 128Mi
+---
+apiVersion: v1
+kind: ResourceQuota
+metadata:
+  name: compute
+  namespace: backend
+spec:
+  hard:
+    pods: "10"
+    requests.cpu: 250m
+    requests.memory: 512Mi
+    limits.cpu: 500m
+    limits.memory: 1Gi
+---
+apiVersion: v1
+kind: LimitRange
+metadata:
+  name: defaults
+  namespace: backend
+spec:
+  limits:
+    - type: Container
+      defaultRequest:
+        cpu: 25m
+        memory: 64Mi
+      default:
+        cpu: 100m
+        memory: 256Mi

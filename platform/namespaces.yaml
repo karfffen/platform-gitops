@@ -1,0 +1,15 @@
+# Workload namespaces from ADR-0007: frontend (internet-facing) and backend (internal only).
+# The "tier" label is what the network policies select on.
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: frontend
+  labels:
+    tier: frontend
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: backend
+  labels:
+    tier: backend

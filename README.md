@@ -10,7 +10,7 @@ Flux on the AKS clusters reads this repository anonymously.
 
 - `clusters/blue`, `clusters/green`: entry points. Each defines the Flux Kustomizations `platform` and `apps` (`apps` depends on `platform`; interval 10m; prune off).
 - `platform/`: cluster add-ons shared by both clusters (namespaces, network policies, quotas): `frontend` and `backend`, each denied by default.
-- `apps/`: one folder per workload. Empty for now.
+- `apps/`: one folder per workload. Now: `hello-world`, Microsoft's sample page in `frontend`, routed by the ingress.
 - `.kube-version`: the passive cluster's Kubernetes minor. CI checks manifests against it.
 
 Everything here is public: never add secrets.

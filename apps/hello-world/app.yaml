@@ -1,5 +1,6 @@
 # Hello world page from Microsoft's AKS sample image (public, nothing sensitive).
 # One replica: blue and green have a single node each (ADR-0005, ADR-0012).
+# CLUSTER_COLOUR is set per cluster in gitops/clusters/<colour>/apps.yaml (Flux postBuild.substitute).
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -24,7 +25,7 @@ spec:
             - containerPort: 80
           env:
             - name: TITLE
-              value: "Hello from the karfffen lab"
+              value: "Hello from the ${CLUSTER_COLOUR} cluster"
           readinessProbe:
             httpGet:
               path: /

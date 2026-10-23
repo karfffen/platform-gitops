@@ -36,14 +36,21 @@ spec:
         - protocol: TCP
           port: 53
 ---
-# The ingress controller (application routing add-on namespace) may reach frontend pods.
+# The ingress controller (application routing add-on namespace) may reach the web pods
+# (hello-world and the TodoApp web service) on their container ports, and nothing else.
 apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy
 metadata:
   name: allow-from-ingress
   namespace: frontend
 spec:
-  podSelector: {}
+  podSelector:
+    matchExpressions:
+      - key: app
+        operator: In
+        values:
+          - hello-world
+          - todoapp-web
   policyTypes:
     - Ingress
   ingress:
@@ -51,15 +58,23 @@ spec:
         - namespaceSelector:
             matchLabels:
               kubernetes.io/metadata.name: app-routing-system
+      ports:
+        - protocol: TCP
+          port: 80
+        - protocol: TCP
+          port: 8080
 ---
-# Frontend may call backend namespaces and the internet, but not the VNet or other private ranges.
+# The TodoApp web pods may call the API pods in backend, and nothing else (no internet, no VNet).
+# The name is historic: renaming would delete the policy, so it was narrowed in place (#203).
 apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy
 metadata:
   name: allow-egress-backend-and-internet
   namespace: frontend
 spec:
-  podSelector: {}
+  podSelector:
+    matchLabels:
+      app: todoapp-web
   policyTypes:
     - Egress
   egress:
@@ -67,13 +82,12 @@ spec:
         - namespaceSelector:
             matchLabels:
               tier: backend
-    - to:
-        - ipBlock:
-            cidr: 0.0.0.0/0
-            except:
-              - 10.0.0.0/8
-              - 172.16.0.0/12
-              - 192.168.0.0/16
+          podSelector:
+            matchLabels:
+              app: todoapp-api
+      ports:
+        - protocol: TCP
+          port: 8080
 ---
 apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy
@@ -109,14 +123,16 @@ spec:
         - protocol: TCP
           port: 53
 ---
-# Backend accepts traffic only from frontend and backend namespaces.
+# Backend accepts traffic only on the API pods, from the TodoApp web pods in frontend.
 apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy
 metadata:
   name: allow-from-frontend-and-backend
   namespace: backend
 spec:
-  podSelector: {}
+  podSelector:
+    matchLabels:
+      app: todoapp-api
   policyTypes:
     - Ingress
   ingress:
@@ -124,12 +140,16 @@ spec:
         - namespaceSelector:
             matchLabels:
               tier: frontend
-        - namespaceSelector:
+          podSelector:
             matchLabels:
-              tier: backend
+              app: todoapp-web
+      ports:
+        - protocol: TCP
+          port: 8080
 ---
-# Backend may call other backend namespaces and the private-endpoint subnets (blue, green).
-# No 0.0.0.0/0.
+# Backend pods get no egress beyond DNS (allow-dns). The API uses SQLite on emptyDir and calls
+# nothing else. The private-endpoint ranges from ADR-0007 get a rule when something needs them.
+# The name is historic: renaming would delete the policy, so it was emptied in place (#203).
 apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy
 metadata:
@@ -139,14 +159,4 @@ spec:
   podSelector: {}
   policyTypes:
     - Egress
-  egress:
-    - to:
-        - namespaceSelector:
-            matchLabels:
-              tier: backend
-    - to:
-        - ipBlock:
-            cidr: 10.10.1.0/24
-    - to:
-        - ipBlock:
-            cidr: 10.20.1.0/24
+  egress: []

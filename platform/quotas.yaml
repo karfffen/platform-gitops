@@ -1,5 +1,7 @@
-# Sized for blue's single 4 GiB node (ADR-0004, ADR-0012). The node also runs system pods and the
-# Flux controllers, so the two namespaces together may limit about 1.5 GiB and 1 vCPU.
+# Sized from blue's free capacity in docs/app-candidates.md (estimate: about 1800m CPU and 11 GiB
+# free on the 4 vCPU node; #163 could not reach blue). With 20% spare (ADR-0016) the two namespaces
+# together may request at most about 1400m and 8.5 GiB. Requests here total 1000m and 1.5 GiB
+# (hello-world uses 25m and 32Mi of that); limits may overcommit. Raised for the TodoApp in #203.
 # The LimitRange gives pods without requests a small default so the quota still admits them.
 apiVersion: v1
 kind: ResourceQuota
@@ -9,10 +11,10 @@ metadata:
 spec:
   hard:
     pods: "10"
-    requests.cpu: 250m
-    requests.memory: 256Mi
-    limits.cpu: 500m
-    limits.memory: 512Mi
+    requests.cpu: 500m
+    requests.memory: 512Mi
+    limits.cpu: 1000m
+    limits.memory: 1Gi
 ---
 apiVersion: v1
 kind: LimitRange
@@ -37,10 +39,10 @@ metadata:
 spec:
   hard:
     pods: "10"
-    requests.cpu: 250m
-    requests.memory: 512Mi
-    limits.cpu: 500m
-    limits.memory: 1Gi
+    requests.cpu: 500m
+    requests.memory: 1Gi
+    limits.cpu: 1000m
+    limits.memory: 2Gi
 ---
 apiVersion: v1
 kind: LimitRange

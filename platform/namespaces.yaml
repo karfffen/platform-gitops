@@ -13,3 +13,10 @@ metadata:
   name: backend
   labels:
     tier: backend
+---
+# One namespace for the whole TodoApp product (ADR-0017 Amendment 1). Its manifests come from
+# gitops-apps through the namespace-scoped Flux configuration app-todoapp (ADR-0016).
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: todoapp

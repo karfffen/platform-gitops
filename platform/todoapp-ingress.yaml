@@ -1,0 +1,20 @@
+# Public entry for the TodoApp web service only (ADR-0015: HTTP, existing NGINX class, no new IP).
+# The API in backend has no Ingress. The Service `todoapp-web` is shipped by gitops-apps (ADR-0016).
+# hello-world keeps "/"; NGINX picks the longest matching prefix, so "/todo" goes to the app.
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: todoapp-web
+  namespace: frontend
+spec:
+  ingressClassName: webapprouting.kubernetes.azure.com
+  rules:
+    - http:
+        paths:
+          - path: /todo
+            pathType: Prefix
+            backend:
+              service:
+                name: todoapp-web
+                port:
+                  number: 80

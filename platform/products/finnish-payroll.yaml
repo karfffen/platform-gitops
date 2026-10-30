@@ -41,6 +41,26 @@ spec:
         - protocol: TCP
           port: 53
 ---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-from-ingress
+  namespace: finnish-payroll
+spec:
+  podSelector:
+    matchLabels:
+      app: finnish-payroll-web
+  policyTypes:
+    - Ingress
+  ingress:
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: app-routing-system
+      ports:
+        - protocol: TCP
+          port: 8080
+---
 apiVersion: v1
 kind: ResourceQuota
 metadata:
@@ -68,3 +88,23 @@ spec:
       default:
         cpu: 100m
         memory: 256Mi
+---
+# Public entry for finnish-payroll-web only (ADR-0015: HTTP, existing NGINX class, no new IP). The Service
+# `web` is shipped by the product's gitops repo.
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: web
+  namespace: finnish-payroll
+spec:
+  ingressClassName: webapprouting.kubernetes.azure.com
+  rules:
+    - http:
+        paths:
+          - path: /shop
+            pathType: Prefix
+            backend:
+              service:
+                name: web
+                port:
+                  number: 8080

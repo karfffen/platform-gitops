@@ -1,0 +1,26 @@
+# Durable disks for TodoApp (ADR-0024 option A): Azure Disk CSI, Standard SSD LRS, one 4 GiB disk per
+# cluster (about $0.65 a month for both, approved on #763). `Retain` keeps the disk if the claim is
+# removed; removing a claim or disk is a delete and goes to the owner. The disks land in the node
+# resource group, so the tags are set here (CLAUDE.md, Tagging).
+apiVersion: storage.k8s.io/v1
+kind: StorageClass
+metadata:
+  name: todoapp-disk
+provisioner: disk.csi.azure.com
+parameters:
+  skuName: StandardSSD_LRS
+  tags: project=lab,owner=karfffen,managed-by=terraform,component=todoapp
+reclaimPolicy: Retain
+allowVolumeExpansion: true
+volumeBindingMode: WaitForFirstConsumer
+---
+# Incremental snapshots of the same disks (ADR-0024). Copies to the passive cluster are roadmap item 6.
+apiVersion: snapshot.storage.k8s.io/v1
+kind: VolumeSnapshotClass
+metadata:
+  name: todoapp-disk-snapshot
+driver: disk.csi.azure.com
+deletionPolicy: Retain
+parameters:
+  incremental: "true"
+  tags: project=lab,owner=karfffen,managed-by=terraform,component=todoapp

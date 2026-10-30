@@ -113,6 +113,8 @@ spec:
     requests.memory: 1536Mi
     limits.cpu: 2000m
     limits.memory: 3Gi
+    persistentvolumeclaims: "1"
+    requests.storage: 4Gi
 ---
 apiVersion: v1
 kind: LimitRange
@@ -128,6 +130,21 @@ spec:
       default:
         cpu: 100m
         memory: 256Mi
+---
+# Durable disk (ADR-0024). The StorageClass is in gitops/platform/storage.yaml; the Deployment in the
+# product's gitops repo mounts the claim by name. The quota above allows this one claim and no more.
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: todoapp-data
+  namespace: todoapp
+spec:
+  accessModes:
+    - ReadWriteOnce
+  storageClassName: todoapp-disk
+  resources:
+    requests:
+      storage: 4Gi
 ---
 # Public entry for todoapp-web only (ADR-0015: HTTP, existing NGINX class, no new IP). The Service
 # `todoapp-web` is shipped by the product's gitops repo.

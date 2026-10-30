@@ -4,4 +4,5 @@ resources:
   - namespaces.yaml
   - network-policies.yaml
   - quotas.yaml
+  - storage.yaml
   - products

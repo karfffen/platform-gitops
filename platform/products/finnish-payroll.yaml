@@ -85,9 +85,13 @@ spec:
       defaultRequest:
         cpu: 25m
         memory: 64Mi
+        ephemeral-storage: 256Mi
       default:
         cpu: 100m
         memory: 256Mi
+        ephemeral-storage: 2Gi
+      max:
+        ephemeral-storage: 4Gi
 ---
 # Public entry for finnish-payroll-web only (ADR-0015: HTTP, existing NGINX class, no new IP). The Service
 # `web` is shipped by the product's gitops repo.

@@ -1,0 +1,152 @@
+# Traefik replaces AKS App Routing on k3s (ADR-0026 section 4; ingress-nginx was retired in March 2026).
+# It runs in app-routing-system and owns an IngressClass named like App Routing's, so every product
+# Ingress and every allow-from-ingress NetworkPolicy works unchanged. No Service: it listens on the
+# k3s node's ports 80/443, which Docker publishes on the VM (k3s/terraform/locals.tf).
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: app-routing-system
+---
+apiVersion: source.toolkit.fluxcd.io/v1
+kind: HelmRepository
+metadata:
+  name: traefik
+  namespace: flux-system
+spec:
+  interval: 24h
+  url: https://traefik.github.io/charts
+---
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: traefik
+  namespace: flux-system
+spec:
+  interval: 1h
+  targetNamespace: app-routing-system
+  releaseName: traefik
+  chart:
+    spec:
+      chart: traefik
+      version: 42.1.3
+      sourceRef:
+        kind: HelmRepository
+        name: traefik
+  values:
+    ingressClass:
+      enabled: true
+      isDefaultClass: false
+      name: webapprouting.kubernetes.azure.com
+    providers:
+      kubernetesCRD:
+        enabled: false
+      kubernetesIngress:
+        enabled: true
+    service:
+      enabled: false
+    ports:
+      web:
+        hostPort: 80
+      websecure:
+        hostPort: 443
+    resources:
+      requests:
+        cpu: 50m
+        memory: 64Mi
+      limits:
+        memory: 256Mi
+---
+# Deny by default like every namespace (ADR-0007), then only what Traefik needs.
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: default-deny
+  namespace: app-routing-system
+spec:
+  podSelector: {}
+  policyTypes:
+    - Ingress
+    - Egress
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-dns
+  namespace: app-routing-system
+spec:
+  podSelector: {}
+  policyTypes:
+    - Egress
+  egress:
+    - to:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: kube-system
+          podSelector:
+            matchLabels:
+              k8s-app: kube-dns
+      ports:
+        - protocol: UDP
+          port: 53
+        - protocol: TCP
+          port: 53
+---
+# Host-port traffic from the VM arrives on Traefik's container ports (chart defaults 8000/8443).
+# The rule has no `from:`, so any pod in the cluster can also reach these two ports; that is fine
+# for an ingress.
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-ingress-traffic
+  namespace: app-routing-system
+spec:
+  podSelector: {}
+  policyTypes:
+    - Ingress
+  ingress:
+    - ports:
+        - protocol: TCP
+          port: 8000
+        - protocol: TCP
+          port: 8443
+---
+# Traefik watches Ingresses through the k3s API server (6443 on the node) and forwards to the
+# product web pods (the ports allow-from-ingress opens) and to Headlamp.
+# The 6443 rule has no `to:` (any address) because the node address is not in this public repo.
+# Pods reach the API through the kubernetes Service, which is DNATed to 6443 before policy applies
+# (confirm on the first sync).
+# Every product namespace (todoapp, modernizer, finnish-payroll, ...) opens 8080 to
+# app-routing-system in its own allow-from-ingress, so 8080 is allowed to any namespace here and
+# a new product namespace needs no change in this file.
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-egress-api-and-backends
+  namespace: app-routing-system
+spec:
+  podSelector: {}
+  policyTypes:
+    - Egress
+  egress:
+    - ports:
+        - protocol: TCP
+          port: 6443
+    - to:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: frontend
+      ports:
+        - protocol: TCP
+          port: 80
+    - to:
+        - namespaceSelector: {}
+      ports:
+        - protocol: TCP
+          port: 8080
+    - to:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: headlamp
+      ports:
+        - protocol: TCP
+          port: 4466

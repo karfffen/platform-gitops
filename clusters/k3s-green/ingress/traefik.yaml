@@ -38,8 +38,12 @@ spec:
       isDefaultClass: false
       name: webapprouting.kubernetes.azure.com
     providers:
+      # Traefik's own resources only in the headlamp namespace: its slash redirect (ui/headlamp.yaml).
       kubernetesCRD:
-        enabled: false
+        enabled: true
+        namespaces:
+          - headlamp
+        allowCrossNamespace: false
       kubernetesIngress:
         enabled: true
     service:

@@ -48,6 +48,13 @@ spec:
         enabled: true
     service:
       enabled: false
+    # Host ports 80/443 on one node: a new pod can't start beside the old one, so a surge rollout
+    # waits forever (first seen 2026-11-11). Stop the old pod first; a few seconds without ingress.
+    updateStrategy:
+      type: RollingUpdate
+      rollingUpdate:
+        maxUnavailable: 1
+        maxSurge: 0
     ports:
       web:
         hostPort: 80

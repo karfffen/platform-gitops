@@ -1,7 +1,7 @@
 # Read-only web UI (ADR-0026 section 4): Headlamp with its Flux plugin, at http://<VM address>/headlamp/ (/headlamp redirects there).
 # Headlamp calls the API with the token you sign in with, so what you can do is what that token can do.
-# The only token meant for it is headlamp-viewer's, bound to the built-in `view` ClusterRole: it can
-# read, not change or delete (rule 2). Create one on the VM, never commit it:
+# The only token meant for it is headlamp-viewer's, bound to the built-in `view` ClusterRole plus the
+# read-only roles below: it can read, not change or delete (rule 2). Create one on the VM, never commit it:
 #   sudo docker exec k3s-lab-<colour> kubectl -n headlamp create token headlamp-viewer --duration=24h
 apiVersion: v1
 kind: Namespace
@@ -55,6 +55,46 @@ roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: ClusterRole
   name: headlamp-viewer-flux
+subjects:
+  - kind: ServiceAccount
+    name: headlamp-viewer
+    namespace: headlamp
+---
+# Headlamp's Cluster pages (nodes, storage, classes, metrics) read cluster-scoped infrastructure that the
+# built-in `view` role leaves out (first seen 2026-11-11: "You don't have permissions" on Nodes). Read-only.
+# No Secrets, RBAC objects, webhooks, leases or API services, as `view` (ADR-0026 section 4).
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: headlamp-viewer-cluster
+rules:
+  - apiGroups: [""]
+    resources: ["nodes", "persistentvolumes"]
+    verbs: ["get", "list", "watch"]
+  - apiGroups: ["storage.k8s.io"]
+    resources: ["storageclasses", "csidrivers", "csinodes", "volumeattachments"]
+    verbs: ["get", "list", "watch"]
+  - apiGroups: ["networking.k8s.io"]
+    resources: ["ingressclasses"]
+    verbs: ["get", "list", "watch"]
+  - apiGroups: ["scheduling.k8s.io"]
+    resources: ["priorityclasses"]
+    verbs: ["get", "list", "watch"]
+  - apiGroups: ["node.k8s.io"]
+    resources: ["runtimeclasses"]
+    verbs: ["get", "list", "watch"]
+  - apiGroups: ["metrics.k8s.io"]
+    resources: ["nodes", "pods"]
+    verbs: ["get", "list"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: headlamp-viewer-cluster
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: headlamp-viewer-cluster
 subjects:
   - kind: ServiceAccount
     name: headlamp-viewer

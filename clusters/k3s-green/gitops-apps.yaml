@@ -1,0 +1,17 @@
+# The shared source for the private Azure DevOps repo gitops-apps (ADR-0026 Amendment 2, item 3). Only the
+# URL is in git: k3s-flux-token.yml writes the Secret gitops-apps-token (key bearerToken) into flux-system
+# every 30 minutes, outside git. Nothing reads this source yet: each product adds its own app-<repo>
+# Kustomization, suspended, after the multitenancy lockdown in k3s/manifests/ merges. No cluster-wide
+# Kustomization reads it.
+apiVersion: source.toolkit.fluxcd.io/v1
+kind: GitRepository
+metadata:
+  name: gitops-apps
+  namespace: flux-system
+spec:
+  interval: 10m
+  url: https://dev.azure.com/karfffen-lab/karfffen-lab/_git/gitops-apps
+  ref:
+    branch: main
+  secretRef:
+    name: gitops-apps-token

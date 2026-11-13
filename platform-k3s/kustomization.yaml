@@ -1,6 +1,8 @@
 # The shared platform for the k3s clusters (ADR-0026 section 4): everything in ../platform, with the
 # Azure-only parts swapped. TodoApp's StorageClass uses k3s's local-path provisioner, and the Azure Disk
 # snapshot class is left out (k3s has no snapshot CRDs). The AKS clusters keep reading ./platform.
+# Every Namespace of this build also gets the Pod Security labels that make the API server refuse unsafe
+# pods (ADR-0026 Amendment 11); on AKS that is Azure Policy's job (ADR-0016 Amendment 2).
 apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
 resources:
@@ -24,3 +26,17 @@ patches:
       kind: VolumeSnapshotClass
       metadata:
         name: todoapp-disk-snapshot
+  # No name in the target, so frontend, backend and every product's namespace are selected, also one
+  # onboarded later. The name in the patch is a placeholder that kustomize needs and does not apply: each
+  # Namespace keeps its own name and its other labels. enforce-version follows ../.kube-version; the PR
+  # that moves that file moves this label too (Amendment 11 point 1).
+  - target:
+      kind: Namespace
+    patch: |
+      apiVersion: v1
+      kind: Namespace
+      metadata:
+        name: every-namespace-of-this-build
+        labels:
+          pod-security.kubernetes.io/enforce: baseline
+          pod-security.kubernetes.io/enforce-version: v1.35

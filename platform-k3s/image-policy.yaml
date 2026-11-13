@@ -1,0 +1,52 @@
+# The image rule on the k3s clusters (ADR-0026 Amendment 11 point 2), in place of Azure Policy's "containers should
+# only use allowed images" on AKS. In every namespace with the Pod Security label, each container, init container and
+# ephemeral container of a pod must name an image under registry-lab:5000/<the pod's namespace>/, or one of the exact
+# names below. A product's namespace has the product's name, so it cannot run another product's image either.
+# The API server evaluates both objects itself: no pod, no webhook. It reads a name only, no signature.
+# pods/ephemeralcontainers is matched too, because ephemeral containers are only ever added through it.
+apiVersion: admissionregistration.k8s.io/v1
+kind: ValidatingAdmissionPolicy
+metadata:
+  name: images-from-registry-lab
+spec:
+  failurePolicy: Fail
+  matchConstraints:
+    resourceRules:
+      - apiGroups: [""]
+        apiVersions: ["v1"]
+        operations: ["CREATE", "UPDATE"]
+        resources: ["pods", "pods/ephemeralcontainers"]
+  variables:
+    - name: prefix
+      expression: "'registry-lab:5000/' + request.namespace + '/'"
+    # Public images allowed by exact name. A product that needs one asks for it here in its own PR (Amendment 11
+    # point 2). Today only the platform's demo in frontend (gitops/apps/hello-world/app.yaml).
+    - name: exactNames
+      expression: "['mcr.microsoft.com/azuredocs/aks-helloworld:v1']"
+    - name: images
+      expression: >-
+        object.spec.containers.map(c, c.image)
+        + (has(object.spec.initContainers) ? object.spec.initContainers.map(c, c.image) : [])
+        + (has(object.spec.ephemeralContainers) ? object.spec.ephemeralContainers.map(c, c.image) : [])
+    - name: refused
+      expression: "variables.images.filter(i, !i.startsWith(variables.prefix) && !(i in variables.exactNames))"
+  validations:
+    - expression: "size(variables.refused) == 0"
+      message: "every image must be under registry-lab:5000/<namespace>/ or on the policy's list of exact names"
+      messageExpression: "'image not under ' + variables.prefix + ' and not on the policy list: ' + variables.refused.join(', ')"
+      reason: Forbidden
+---
+# Binds the rule to the namespaces that carry the Pod Security label (the patch in kustomization.yaml), so the two
+# rules always come together.
+apiVersion: admissionregistration.k8s.io/v1
+kind: ValidatingAdmissionPolicyBinding
+metadata:
+  name: images-from-registry-lab
+spec:
+  policyName: images-from-registry-lab
+  validationActions: [Deny]
+  matchResources:
+    namespaceSelector:
+      matchExpressions:
+        - key: pod-security.kubernetes.io/enforce
+          operator: Exists

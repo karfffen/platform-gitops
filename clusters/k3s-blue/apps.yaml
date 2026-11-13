@@ -6,6 +6,7 @@ metadata:
 spec:
   interval: 10m
   prune: false
+  serviceAccountName: kustomize-controller
   dependsOn:
     - name: platform
   path: ./apps

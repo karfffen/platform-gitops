@@ -7,6 +7,7 @@ metadata:
 spec:
   interval: 10m
   prune: false
+  serviceAccountName: kustomize-controller
   path: ./clusters/k3s-green/ingress
   sourceRef:
     kind: GitRepository

@@ -116,6 +116,7 @@ metadata:
   namespace: flux-system
 spec:
   interval: 1h
+  serviceAccountName: helm-controller
   targetNamespace: headlamp
   releaseName: headlamp
   chart:

@@ -2,11 +2,13 @@
 # Azure-only parts swapped. TodoApp's StorageClass uses k3s's local-path provisioner, and the Azure Disk
 # snapshot class is left out (k3s has no snapshot CRDs). The AKS clusters keep reading ./platform.
 # Every Namespace of this build also gets the Pod Security labels that make the API server refuse unsafe
-# pods (ADR-0026 Amendment 11); on AKS that is Azure Policy's job (ADR-0016 Amendment 2).
+# pods (ADR-0026 Amendment 11); on AKS that is Azure Policy's job (ADR-0016 Amendment 2). The same label selects
+# the namespaces where image-policy.yaml refuses images from outside registry-lab (Amendment 11 point 2).
 apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
 resources:
   - ../platform
+  - image-policy.yaml
 patches:
   - target:
       kind: StorageClass

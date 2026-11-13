@@ -5,3 +5,4 @@ resources:
   - apps.yaml
   - ingress.yaml
   - ui.yaml
+  - gitops-apps.yaml

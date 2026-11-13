@@ -23,6 +23,7 @@ metadata:
   namespace: flux-system
 spec:
   interval: 1h
+  serviceAccountName: helm-controller
   targetNamespace: app-routing-system
   releaseName: traefik
   chart:
